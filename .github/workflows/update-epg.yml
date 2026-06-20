@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '30 18 * * *'   # Daily midnight IST (18:30 UTC)
   workflow_dispatch:
+    inputs:
+      days:
+        description: 'Days to fetch (1-14)'
+        required: false
+        default: '7'
 
 jobs:
   generate-epg:
@@ -17,13 +22,17 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Generate EPG XML
-        run: python3 sunnxt_epg.py --output sunnxt_epg.xml --gz
+      - name: Fetch EPG from Sun NXT API
+        run: |
+          DAYS=${{ github.event.inputs.days || '7' }}
+          echo "Fetching $DAYS days of EPG..."
+          python3 sunnxt_epg.py --days $DAYS --output sunnxt_epg.xml --gz
 
-      - name: Verify output
+      - name: Show stats
         run: |
           ls -lh sunnxt_epg.xml sunnxt_epg.xml.gz
-          head -20 sunnxt_epg.xml
+          echo "Programme count: $(grep -c '<programme' sunnxt_epg.xml)"
+          echo "Channel count:   $(grep -c '<channel' sunnxt_epg.xml)"
 
       - name: Commit and push
         run: |
@@ -31,6 +40,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add sunnxt_epg.xml sunnxt_epg.xml.gz
           git diff --staged --quiet || (
-            git commit -m "chore: refresh EPG $(date +'%Y-%m-%d')"
+            git commit -m "chore: refresh EPG $(date +'%Y-%m-%d') ($DAYS days)"
             git push
           )
