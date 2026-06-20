@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tv generator-info-name="sunnxt-epg" generator-info-url="https://github.com/yourusername/sunnxt-epg" source-info-name="Sun NXT" source-info-url="https://www.sunnxt.com/live">
+  <channel id="sun195491">
+    <display-name lang="ta">Sun TV HD (Dolby Vision)</display-name>
+    <icon src="https://sund-images.sunnxt.com/14020/300x300_9dd88de4-18ab-493b-98fe-6eb27e9cbf5e.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194403">
+    <display-name lang="ta">Sun TV HD</display-name>
+    <icon src="https://sund-images.sunnxt.com/14020/300x300_9dd88de4-18ab-493b-98fe-6eb27e9cbf5e.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194408">
+    <display-name lang="ta">Sun TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/9016/300x300_4522d18b-56cc-42be-8365-c54e21a6e394.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194405">
+    <display-name lang="ta">KTV HD</display-name>
+    <icon src="https://sund-images.sunnxt.com/26566/300x300_45814266-8c8b-45c6-a801-643e6734f73d.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194409">
+    <display-name lang="ta">KTV</display-name>
+    <icon src="https://sund-images.sunnxt.com/32138/300x300_84b30aac-654e-4dd5-b5ee-bd8204254735.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194406">
+    <display-name lang="ta">Sun Music HD</display-name>
+    <icon src="https://sund-images.sunnxt.com/9013/300x300_ff49d176-a9d2-4f50-b6bc-a10caac8d3a5.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194410">
+    <display-name lang="ta">Sun Music</display-name>
+    <icon src="https://sund-images.sunnxt.com/9025/300x300_c8897f06-b2c0-4856-9d81-02181b821cf7.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194391">
+    <display-name lang="ta">Sun Life</display-name>
+    <icon src="https://sund-images.sunnxt.com/26569/300x300_SunLife_26569_1e6604fc-2df9-4598-8f1c-dcbda46254ab.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194404">
+    <display-name lang="ta">Sun News</display-name>
+    <icon src="https://sund-images.sunnxt.com/38926/300x300_SunNews_38926_5921657d-45b6-445e-9e26-f0cd67be9d39.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194407">
+    <display-name lang="ta">Adithya TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/9023/300x300_30878292-a63e-4414-acbc-902c0afb4b9b.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194390">
+    <display-name lang="ta">Chutti TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/26567/300x300_c103e59e-217e-44fd-a087-651fcf8e6278.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun195490">
+    <display-name lang="te">Gemini TV HD (Dolby Vision)</display-name>
+    <icon src="https://sund-images.sunnxt.com/14019/300x300_72a28627-db58-4739-b61c-4e4208897aed.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194392">
+    <display-name lang="te">Gemini TV HD</display-name>
+    <icon src="https://sund-images.sunnxt.com/14019/300x300_72a28627-db58-4739-b61c-4e4208897aed.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194396">
+    <display-name lang="te">Gemini TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/9017/300x300_66d46fd1-643f-429f-9e19-db603fa0e5e4.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun192537">
+    <display-name lang="te">Gemini Movies HD</display-name>
+    <icon src="https://sund-images.sunnxt.com/26570/300x300_285efca5-02f3-40a1-8f8c-d913e8f6b989.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194384">
+    <display-name lang="te">Gemini Movies</display-name>
+    <icon src="https://sund-images.sunnxt.com/9015/300x300_a4023b29-e49b-4c98-9621-95b7e5c39a19.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194393">
+    <display-name lang="te">Gemini Music HD</display-name>
+    <icon src="https://sund-images.sunnxt.com/26568/300x300_eaa4e437-cce0-4411-8e46-13640be94c55.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194395">
+    <display-name lang="te">Gemini Music</display-name>
+    <icon src="https://sund-images.sunnxt.com/9026/300x300_4cca05ef-46eb-4076-af6b-a8fdc1b88a27.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194394">
+    <display-name lang="te">Gemini Comedy</display-name>
+    <icon src="https://sund-images.sunnxt.com/9027/300x300_5cb5b903-f1a0-4590-bb90-8cfa529322e2.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194337">
+    <display-name lang="te">Gemini Life</display-name>
+    <icon src="https://sund-images.sunnxt.com/26572/300x300_da07159f-fa9c-45d0-beb2-685bedc12e33.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194346">
+    <display-name lang="te">Kushi TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/26571/300x300_d0545f75-f99b-4375-8f42-6120c95fc55c.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun200729">
+    <display-name lang="te">TV9 Telugu</display-name>
+    <icon src="https://sund-images.sunnxt.com/tv9-telugu.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun195489">
+    <display-name lang="ml">Surya TV HD (Dolby Vision)</display-name>
+    <icon src="https://sund-images.sunnxt.com/26574/300x300_6ed3be47-b8bf-45ee-adf1-fb5ae9621e08.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194397">
+    <display-name lang="ml">Surya TV HD</display-name>
+    <icon src="https://sund-images.sunnxt.com/26574/300x300_6ed3be47-b8bf-45ee-adf1-fb5ae9621e08.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194398">
+    <display-name lang="ml">Surya TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/9018/300x300_c10cc678-9321-43f8-b717-16fa7913a6ba.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194385">
+    <display-name lang="ml">Surya Movies</display-name>
+    <icon src="https://sund-images.sunnxt.com/9019/300x300_71ddcc0b-16e7-48e9-9998-aa023200f4bc.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194338">
+    <display-name lang="ml">Surya Music</display-name>
+    <icon src="https://sund-images.sunnxt.com/26575/300x300_a73efcfb-e350-491c-94e0-bd75f0d9d5f2.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun193251">
+    <display-name lang="ml">Surya Comedy</display-name>
+    <icon src="https://sund-images.sunnxt.com/30835/300x300_143a4af4-2f02-4c9c-814b-af149e6a5a95.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194348">
+    <display-name lang="ml">Kochu TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/26573/300x300_5787336f-08b9-480f-9c97-3db09999b558.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun202222">
+    <display-name lang="ml">24 News</display-name>
+    <icon src="https://sund-images.sunnxt.com/24news.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194411">
+    <display-name lang="kn">Udaya TV HD (Dolby Vision)</display-name>
+    <icon src="https://sund-images.sunnxt.com/30846/300x300_efb20223-e677-49fd-985e-806e7b162c6b.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194399">
+    <display-name lang="kn">Udaya TV HD</display-name>
+    <icon src="https://sund-images.sunnxt.com/30846/300x300_efb20223-e677-49fd-985e-806e7b162c6b.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun193239">
+    <display-name lang="kn">Udaya TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/9029/300x300_9f0bcf68-5025-43af-8e60-b83fea67215c.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194386">
+    <display-name lang="kn">Udaya Movies</display-name>
+    <icon src="https://sund-images.sunnxt.com/26576/300x300_4ad767d2-e5d7-45f2-a95a-ab99f56cc2bf.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194401">
+    <display-name lang="kn">Udaya Music</display-name>
+    <icon src="https://sund-images.sunnxt.com/9022/300x300_d85b4dcc-ad0c-4a5b-84fd-6dd91dc585e2.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194400">
+    <display-name lang="kn">Udaya Comedy</display-name>
+    <icon src="https://sund-images.sunnxt.com/9014/300x300_8a47fe5c-81a8-42a4-8a05-f168e6a3c868.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194347">
+    <display-name lang="kn">Chintu TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/26577/300x300_4a0f4f2f-e317-4230-9fb6-6169ef66991d.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun200730">
+    <display-name lang="kn">TV9 Kannada</display-name>
+    <icon src="https://sund-images.sunnxt.com/tv9-kannada.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun202221">
+    <display-name lang="kn">Public TV</display-name>
+    <icon src="https://sund-images.sunnxt.com/public-tv.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun207724">
+    <display-name lang="kn">News9</display-name>
+    <icon src="https://sund-images.sunnxt.com/news9.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194389">
+    <display-name lang="hi">Sun Neo HD</display-name>
+    <icon src="https://sund-images.sunnxt.com/75116/300x300_sun-neo.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun200731">
+    <display-name lang="hi">TV9 Bharatvarsh</display-name>
+    <icon src="https://sund-images.sunnxt.com/tv9-bharatvarsh.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194388">
+    <display-name lang="bn">Sun Bangla</display-name>
+    <icon src="https://sund-images.sunnxt.com/75117/300x300_4b19b530-f0bb-4b26-a9de-f3cdd5f8be20.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+  <channel id="sun194387">
+    <display-name lang="mr">Sun Marathi</display-name>
+    <icon src="https://sund-images.sunnxt.com/75118/300x300_sun-marathi.jpg"/>
+    <url>https://www.sunnxt.com/live</url>
+  </channel>
+</tv>
