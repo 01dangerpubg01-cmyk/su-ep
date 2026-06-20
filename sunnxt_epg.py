@@ -2,15 +2,11 @@
 """
 Sun NXT EPG Generator
 Fetches directly from pwaapi.sunnxt.com/epg/v2/channelEPG/{channelId}
-Supports --days 1..14 for multi-day EPG accumulation
 
 Usage:
-    python3 sunnxt_epg.py                  # today only
-    python3 sunnxt_epg.py --days 7         # fetch 7 days
-    python3 sunnxt_epg.py --days 14        # fetch 14 days
-    python3 sunnxt_epg.py --output epg.xml
-    python3 sunnxt_epg.py --gz
-    python3 sunnxt_epg.py --list-channels
+    python3 sunnxt_epg.py --days 7
+    python3 sunnxt_epg.py --days 14
+    python3 sunnxt_epg.py --output epg.xml --gz
 """
 
 import argparse
@@ -21,12 +17,10 @@ import sys
 import time
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from xml.dom import minidom
 
-# ── Sun NXT PWA API ───────────────────────────────────────────
-BASE_URL = "https://pwaapi.sunnxt.com/epg/v2/channelEPG/{channel_id}"
-PARAMS   = "date={date}&level=epgstatic&imageProfile=mdpi&count=100&startIndex=1&orderBy=siblingOrder&orderMode=1"
+BASE_URL = "https://pwaapi.sunnxt.com/epg/v2/channelEPG/{channel_id}?date={date}&level=epgstatic&imageProfile=mdpi&count=100&startIndex=1&orderBy=siblingOrder&orderMode=1"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
@@ -36,10 +30,8 @@ HEADERS = {
     "Referer": "https://www.sunnxt.com/live",
 }
 
-# ── Sun NXT Channels ──────────────────────────────────────────
-# channel_id = the numeric ID used in pwaapi URL
 CHANNELS = [
-    # Tamil ──────────────────────────────────────────────────
+    # Tamil
     {"id": "195491", "tvg_id": "sun195491", "name": "Sun TV HD (Dolby Vision)", "lang": "ta", "group": "Sun NXT Tamil",
      "icon": "https://sund-images.sunnxt.com/14020/300x300_9dd88de4-18ab-493b-98fe-6eb27e9cbf5e.jpg"},
     {"id": "194403", "tvg_id": "sun194403", "name": "Sun TV HD",                "lang": "ta", "group": "Sun NXT Tamil",
@@ -62,8 +54,7 @@ CHANNELS = [
      "icon": "https://sund-images.sunnxt.com/9023/300x300_30878292-a63e-4414-acbc-902c0afb4b9b.jpg"},
     {"id": "194390", "tvg_id": "sun194390", "name": "Chutti TV",                "lang": "ta", "group": "Sun NXT Tamil",
      "icon": "https://sund-images.sunnxt.com/26567/300x300_c103e59e-217e-44fd-a087-651fcf8e6278.jpg"},
-
-    # Telugu ─────────────────────────────────────────────────
+    # Telugu
     {"id": "195490", "tvg_id": "sun195490", "name": "Gemini TV HD (Dolby Vision)", "lang": "te", "group": "Sun NXT Telugu",
      "icon": "https://sund-images.sunnxt.com/14019/300x300_72a28627-db58-4739-b61c-4e4208897aed.jpg"},
     {"id": "194392", "tvg_id": "sun194392", "name": "Gemini TV HD",             "lang": "te", "group": "Sun NXT Telugu",
@@ -86,8 +77,7 @@ CHANNELS = [
      "icon": "https://sund-images.sunnxt.com/26571/300x300_d0545f75-f99b-4375-8f42-6120c95fc55c.jpg"},
     {"id": "200729", "tvg_id": "sun200729", "name": "TV9 Telugu",               "lang": "te", "group": "Sun NXT Telugu",
      "icon": "https://sund-images.sunnxt.com/tv9-telugu.jpg"},
-
-    # Malayalam ──────────────────────────────────────────────
+    # Malayalam
     {"id": "195489", "tvg_id": "sun195489", "name": "Surya TV HD (Dolby Vision)", "lang": "ml", "group": "Sun NXT Malayalam",
      "icon": "https://sund-images.sunnxt.com/26574/300x300_6ed3be47-b8bf-45ee-adf1-fb5ae9621e08.jpg"},
     {"id": "194397", "tvg_id": "sun194397", "name": "Surya TV HD",              "lang": "ml", "group": "Sun NXT Malayalam",
@@ -104,8 +94,7 @@ CHANNELS = [
      "icon": "https://sund-images.sunnxt.com/26573/300x300_5787336f-08b9-480f-9c97-3db09999b558.jpg"},
     {"id": "202222", "tvg_id": "sun202222", "name": "24 News",                  "lang": "ml", "group": "Sun NXT Malayalam",
      "icon": "https://sund-images.sunnxt.com/24news.jpg"},
-
-    # Kannada ────────────────────────────────────────────────
+    # Kannada
     {"id": "194411", "tvg_id": "sun194411", "name": "Udaya TV HD (Dolby Vision)", "lang": "kn", "group": "Sun NXT Kannada",
      "icon": "https://sund-images.sunnxt.com/30846/300x300_efb20223-e677-49fd-985e-806e7b162c6b.jpg"},
     {"id": "194399", "tvg_id": "sun194399", "name": "Udaya TV HD",              "lang": "kn", "group": "Sun NXT Kannada",
@@ -126,68 +115,55 @@ CHANNELS = [
      "icon": "https://sund-images.sunnxt.com/public-tv.jpg"},
     {"id": "207724", "tvg_id": "sun207724", "name": "News9",                    "lang": "kn", "group": "Sun NXT Kannada",
      "icon": "https://sund-images.sunnxt.com/news9.jpg"},
-
-    # Hindi ──────────────────────────────────────────────────
+    # Hindi
     {"id": "194389", "tvg_id": "sun194389", "name": "Sun Neo HD",               "lang": "hi", "group": "Sun NXT Hindi",
      "icon": "https://sund-images.sunnxt.com/75116/300x300_sun-neo.jpg"},
     {"id": "200731", "tvg_id": "sun200731", "name": "TV9 Bharatvarsh",          "lang": "hi", "group": "Sun NXT Hindi",
      "icon": "https://sund-images.sunnxt.com/tv9-bharatvarsh.jpg"},
-
-    # Bengali ────────────────────────────────────────────────
+    # Bengali
     {"id": "194388", "tvg_id": "sun194388", "name": "Sun Bangla",               "lang": "bn", "group": "Sun NXT Bengali",
      "icon": "https://sund-images.sunnxt.com/75117/300x300_4b19b530-f0bb-4b26-a9de-f3cdd5f8be20.jpg"},
-
-    # Marathi ────────────────────────────────────────────────
+    # Marathi
     {"id": "194387", "tvg_id": "sun194387", "name": "Sun Marathi",              "lang": "mr", "group": "Sun NXT Marathi",
      "icon": "https://sund-images.sunnxt.com/75118/300x300_sun-marathi.jpg"},
 ]
 
+IST = timezone(timedelta(hours=5, minutes=30))
 
-def fmt_xmltv_time(iso_str: str) -> str:
-    """Convert ISO 8601 to XMLTV format: 20260620183000 +0530"""
+
+def to_xmltv_time(iso_str: str) -> str:
+    """
+    API returns IST times like: "2026-06-20T03:00:00.000Z"
+    Note: Despite the Z suffix, Sun NXT sends IST times in startDate/endDate.
+    We use startDate/endDate (IST) directly.
+    """
     try:
-        # Handle formats like "2026-06-20T18:30:00+05:30" or "2026-06-20T18:30:00"
-        iso_str = iso_str.replace("Z", "+00:00")
-        if "+" in iso_str[10:] or iso_str.endswith("-05:30"):
-            # Has timezone
-            dt_part = iso_str[:19]
-            dt = datetime.strptime(dt_part, "%Y-%m-%dT%H:%M:%S")
-        else:
-            dt = datetime.strptime(iso_str[:19], "%Y-%m-%dT%H:%M:%S")
+        s = iso_str.replace(".000Z", "").replace("Z", "")
+        dt = datetime.strptime(s[:19], "%Y-%m-%dT%H:%M:%S")
         return dt.strftime("%Y%m%d%H%M%S") + " +0530"
     except Exception:
-        return iso_str
+        return ""
 
 
 def fetch_channel_epg(channel_id: str, date_str: str) -> list:
-    """Fetch EPG for one channel on one date from Sun NXT API."""
-    url = BASE_URL.format(channel_id=channel_id) + "?" + PARAMS.format(date=date_str)
+    url = BASE_URL.format(channel_id=channel_id, date=date_str)
     req = urllib.request.Request(url, headers=HEADERS)
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-        # Navigate JSON — adjust keys based on actual API response
-        items = (
-            data.get("data", {}).get("items", []) or
-            data.get("items", []) or
-            data.get("result", {}).get("items", []) or
-            data.get("epgData", []) or
-            data.get("epg", []) or
-            []
-        )
-        return items
+        # API returns: {"code":200, "status":"SUCCESS", "results": [...]}
+        return data.get("results", [])
     except Exception as e:
-        print(f"    [!] {channel_id} {date_str}: {e}", file=sys.stderr)
+        print(f"    [!] ch={channel_id} date={date_str}: {e}", file=sys.stderr)
         return []
 
 
 def build_epg(days: int = 1) -> ET.Element:
-    today = datetime.now()
+    today = datetime.now(IST)
     dates = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(days)]
 
     root = ET.Element("tv")
     root.set("generator-info-name", "sunnxt-epg")
-    root.set("generator-info-url", "https://github.com/yourusername/sunnxt-epg")
     root.set("source-info-name", "Sun NXT")
     root.set("source-info-url", "https://www.sunnxt.com/live")
 
@@ -198,56 +174,73 @@ def build_epg(days: int = 1) -> ET.Element:
         dn = ET.SubElement(ch_el, "display-name")
         dn.set("lang", ch["lang"])
         dn.text = ch["name"]
-        icon = ET.SubElement(ch_el, "icon")
-        icon.set("src", ch["icon"])
-        url_el = ET.SubElement(ch_el, "url")
-        url_el.text = "https://www.sunnxt.com/live"
+        ET.SubElement(ch_el, "icon").set("src", ch["icon"])
+        ET.SubElement(ch_el, "url").text = "https://www.sunnxt.com/live"
 
     # Programme entries
-    total_progs = 0
+    total = 0
     for ch in CHANNELS:
         print(f"  [{ch['id']}] {ch['name']}")
         for date_str in dates:
             items = fetch_channel_epg(ch["id"], date_str)
+            print(f"         {date_str}: {len(items)} programmes")
             for item in items:
-                # Try common field names
-                title    = item.get("title") or item.get("episodeTitle") or item.get("name") or "Unknown"
-                desc     = item.get("description") or item.get("synopsis") or item.get("desc") or ""
-                start_raw = item.get("startTime") or item.get("start") or item.get("broadcastStartTime") or ""
-                end_raw   = item.get("endTime")   or item.get("end")   or item.get("broadcastEndTime")   or ""
-
+                title     = item.get("title", "").strip() or "Unknown"
+                # startDate/endDate are IST despite the Z suffix
+                start_raw = item.get("startDate", "")
+                end_raw   = item.get("endDate", "")
                 if not start_raw or not end_raw:
                     continue
 
+                start_xmltv = to_xmltv_time(start_raw)
+                end_xmltv   = to_xmltv_time(end_raw)
+                if not start_xmltv or not end_xmltv:
+                    continue
+
                 prog = ET.SubElement(root, "programme")
-                prog.set("start",   fmt_xmltv_time(start_raw))
-                prog.set("stop",    fmt_xmltv_time(end_raw))
+                prog.set("start",   start_xmltv)
+                prog.set("stop",    end_xmltv)
                 prog.set("channel", ch["tvg_id"])
 
+                # Title
                 t = ET.SubElement(prog, "title")
                 t.set("lang", ch["lang"])
                 t.text = title
 
+                # Description from generalInfo
+                gi = item.get("generalInfo", {})
+                desc = gi.get("description", "").strip() or gi.get("briefDescription", "").strip()
                 if desc:
                     d = ET.SubElement(prog, "desc")
                     d.set("lang", ch["lang"])
                     d.text = desc
 
-                # Optional fields
-                ep_num = item.get("episodeNumber") or item.get("episode")
-                if ep_num:
-                    en = ET.SubElement(prog, "episode-num")
-                    en.set("system", "onscreen")
-                    en.text = str(ep_num)
+                # Genre
+                genres = item.get("content", {}).get("genre", [])
+                if genres:
+                    cat = ET.SubElement(prog, "category")
+                    cat.set("lang", "en")
+                    cat.text = genres[0].get("name", "")
 
-                img = item.get("imageUrl") or item.get("image") or item.get("thumbnail")
-                if img:
-                    ET.SubElement(prog, "icon").set("src", img)
+                # Rating
+                ratings = item.get("content", {}).get("certifiedRatings", {}).get("values", [])
+                if ratings:
+                    r = ET.SubElement(prog, "rating")
+                    r.set("system", "IN")
+                    v = ET.SubElement(r, "value")
+                    v.text = ratings[0].get("rating", "")
 
-                total_progs += 1
-            time.sleep(0.1)  # polite delay
+                # Thumbnail — first coverposter image
+                images = item.get("images", {}).get("values", [])
+                for img in images:
+                    if img.get("type") == "coverposter":
+                        ET.SubElement(prog, "icon").set("src", img.get("link", ""))
+                        break
 
-    print(f"\n[✓] Total programmes: {total_progs}")
+                total += 1
+            time.sleep(0.05)
+
+    print(f"\n[✓] Total programmes fetched: {total}")
     return root
 
 
@@ -260,36 +253,34 @@ def prettify(element: ET.Element) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sun NXT EPG — direct from pwaapi.sunnxt.com")
-    parser.add_argument("--days",         type=int, default=1, help="Days to fetch (1-14, default: 1)")
-    parser.add_argument("--output",       default="sunnxt_epg.xml")
-    parser.add_argument("--gz",           action="store_true", help="Also save .gz")
-    parser.add_argument("--list-channels",action="store_true")
+    parser = argparse.ArgumentParser(description="Sun NXT EPG — pwaapi.sunnxt.com")
+    parser.add_argument("--days",   type=int, default=1, help="Days to fetch (1-14)")
+    parser.add_argument("--output", default="sunnxt_epg.xml")
+    parser.add_argument("--gz",     action="store_true")
+    parser.add_argument("--list-channels", action="store_true")
     args = parser.parse_args()
 
     if args.list_channels:
-        print(f"\n{'ID':<10} {'TVG-ID':<15} {'Name':<35} {'Group'}")
-        print("─" * 80)
         for ch in CHANNELS:
-            print(f"  {ch['id']:<10} {ch['tvg_id']:<15} {ch['name']:<35} {ch['group']}")
-        print(f"\nTotal: {len(CHANNELS)} channels\n")
+            print(f"  {ch['id']:<8} {ch['tvg_id']:<15} {ch['name']}")
+        print(f"\nTotal: {len(CHANNELS)} channels")
         return
 
     days = max(1, min(14, args.days))
-    print(f"[*] Fetching {len(CHANNELS)} channels × {days} day(s) from pwaapi.sunnxt.com ...\n")
+    print(f"[*] Sun NXT EPG — {len(CHANNELS)} channels × {days} day(s)\n")
 
-    root = build_epg(days=days)
+    root    = build_epg(days=days)
     xml_str = prettify(root)
 
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(xml_str)
-    print(f"[✓] Saved: {args.output} ({os.path.getsize(args.output)//1024} KB)")
+    print(f"[✓] {args.output}  ({os.path.getsize(args.output)//1024} KB)")
 
     if args.gz:
-        gz_path = args.output + ".gz"
-        with gzip.open(gz_path, "wb") as f:
+        gz = args.output + ".gz"
+        with gzip.open(gz, "wb") as f:
             f.write(xml_str.encode())
-        print(f"[✓] Saved: {gz_path} ({os.path.getsize(gz_path)//1024} KB)")
+        print(f"[✓] {gz}  ({os.path.getsize(gz)//1024} KB)")
 
 
 if __name__ == "__main__":
