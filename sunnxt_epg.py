@@ -1,279 +1,236 @@
 #!/usr/bin/env python3
 """
-Sun NXT EPG (Electronic Program Guide) Generator
-Generates XMLTV format EPG for Sun NXT live channels
-Compatible with Jellyfin, Plex, Emby, TVHeadend, and other IPTV players
+Sun NXT EPG Generator — Real Schedule Data
+Source: mitthu786/tvepg (daily updated, via GitHub raw)
 
 Usage:
-    python sunnxt_epg.py                  # Generate EPG for today
-    python sunnxt_epg.py --days 7         # Generate EPG for 7 days
-    python sunnxt_epg.py --output epg.xml # Custom output file
-
-GitHub: https://github.com/yourusername/sunnxt-epg
+    python3 sunnxt_epg.py                   # fetch & generate EPG
+    python3 sunnxt_epg.py --output epg.xml
+    python3 sunnxt_epg.py --gz              # also write .gz
+    python3 sunnxt_epg.py --list-channels
 """
 
+import argparse
+import gzip
+import os
+import sys
+import urllib.request
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
-from datetime import datetime, timedelta
-import argparse
-import sys
-import os
 
-# ─────────────────────────────────────────────
-# Sun NXT Channel Definitions
-# Source: https://www.sunnxt.com/live
-# ─────────────────────────────────────────────
+# ── Upstream source ────────────────────────────────────────────
+EPG_URL = "https://raw.githubusercontent.com/mitthu786/tvepg/main/epg.xml.gz"
 
+# ── Sun NXT Channel Map  (real IDs from upstream EPG) ─────────
 CHANNELS = {
-    # ── Tamil ────────────────────────────────
-    "sunnxt-sun-tv-dv":        {"name": "Sun TV (Dolby Vision)",  "lang": "ta", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/sun-tv.png"},
-    "sunnxt-ktv-hd":           {"name": "KTV HD",                 "lang": "ta", "country": "IN", "category": "Movies",        "icon": "https://www.sunnxt.com/images/channels/ktv.png"},
-    "sunnxt-sun-music-hd":     {"name": "Sun Music HD",           "lang": "ta", "country": "IN", "category": "Music",         "icon": "https://www.sunnxt.com/images/channels/sun-music.png"},
-    "sunnxt-sun-life":         {"name": "Sun Life",               "lang": "ta", "country": "IN", "category": "Lifestyle",     "icon": "https://www.sunnxt.com/images/channels/sun-life.png"},
-    "sunnxt-sun-news":         {"name": "Sun News",               "lang": "ta", "country": "IN", "category": "News",          "icon": "https://www.sunnxt.com/images/channels/sun-news.png"},
-    "sunnxt-adithya-tv":       {"name": "Adithya TV",             "lang": "ta", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/adithya-tv.png"},
-    "sunnxt-chutti-tv":        {"name": "Chutti TV",              "lang": "ta", "country": "IN", "category": "Kids",          "icon": "https://www.sunnxt.com/images/channels/chutti-tv.png"},
-    "sunnxt-sun-tv-sd":        {"name": "Sun TV SD",              "lang": "ta", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/sun-tv.png"},
-    "sunnxt-ktv-sd":           {"name": "KTV SD",                 "lang": "ta", "country": "IN", "category": "Movies",        "icon": "https://www.sunnxt.com/images/channels/ktv.png"},
-    "sunnxt-sun-music-sd":     {"name": "Sun Music SD",           "lang": "ta", "country": "IN", "category": "Music",         "icon": "https://www.sunnxt.com/images/channels/sun-music.png"},
+    # Tamil ──────────────────────────────────────────────────
+    "sun195491": {"name": "Sun TV HD (Dolby Vision)", "lang": "ta", "group": "Tamil",    "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/14020/300x300_9dd88de4-18ab-493b-98fe-6eb27e9cbf5e.jpg"},
+    "sun194403": {"name": "Sun TV HD",                "lang": "ta", "group": "Tamil",    "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/14020/300x300_9dd88de4-18ab-493b-98fe-6eb27e9cbf5e.jpg"},
+    "sun194408": {"name": "Sun TV",                   "lang": "ta", "group": "Tamil",    "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/9016/300x300_4522d18b-56cc-42be-8365-c54e21a6e394.jpg"},
+    "sun194405": {"name": "KTV HD",                   "lang": "ta", "group": "Tamil",    "category": "Movies",
+                  "icon": "https://sund-images.sunnxt.com/26566/300x300_45814266-8c8b-45c6-a801-643e6734f73d.jpg"},
+    "sun194409": {"name": "KTV",                      "lang": "ta", "group": "Tamil",    "category": "Movies",
+                  "icon": "https://sund-images.sunnxt.com/32138/300x300_84b30aac-654e-4dd5-b5ee-bd8204254735.jpg"},
+    "sun194406": {"name": "Sun Music HD",             "lang": "ta", "group": "Tamil",    "category": "Music",
+                  "icon": "https://sund-images.sunnxt.com/9013/300x300_ff49d176-a9d2-4f50-b6bc-a10caac8d3a5.jpg"},
+    "sun194410": {"name": "Sun Music",                "lang": "ta", "group": "Tamil",    "category": "Music",
+                  "icon": "https://sund-images.sunnxt.com/9025/300x300_c8897f06-b2c0-4856-9d81-02181b821cf7.jpg"},
+    "sun194391": {"name": "Sun Life",                 "lang": "ta", "group": "Tamil",    "category": "Lifestyle",
+                  "icon": "https://sund-images.sunnxt.com/26569/300x300_SunLife_26569_1e6604fc-2df9-4598-8f1c-dcbda46254ab.jpg"},
+    "sun194404": {"name": "Sun News",                 "lang": "ta", "group": "Tamil",    "category": "News",
+                  "icon": "https://sund-images.sunnxt.com/38926/300x300_SunNews_38926_5921657d-45b6-445e-9e26-f0cd67be9d39.jpg"},
+    "sun194407": {"name": "Adithya TV",               "lang": "ta", "group": "Tamil",    "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/9023/300x300_30878292-a63e-4414-acbc-902c0afb4b9b.jpg"},
+    "sun194390": {"name": "Chutti TV",                "lang": "ta", "group": "Tamil",    "category": "Kids",
+                  "icon": "https://sund-images.sunnxt.com/26567/300x300_c103e59e-217e-44fd-a087-651fcf8e6278.jpg"},
 
-    # ── Telugu ───────────────────────────────
-    "sunnxt-gemini-tv-dv":     {"name": "Gemini TV (Dolby Vision)", "lang": "te", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/gemini-tv.png"},
-    "sunnxt-gemini-tv-hd":     {"name": "Gemini TV HD",            "lang": "te", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/gemini-tv.png"},
-    "sunnxt-gemini-movies-hd": {"name": "Gemini Movies HD",        "lang": "te", "country": "IN", "category": "Movies",        "icon": "https://www.sunnxt.com/images/channels/gemini-movies.png"},
-    "sunnxt-gemini-music-hd":  {"name": "Gemini Music HD",         "lang": "te", "country": "IN", "category": "Music",         "icon": "https://www.sunnxt.com/images/channels/gemini-music.png"},
-    "sunnxt-gemini-comedy":    {"name": "Gemini Comedy",           "lang": "te", "country": "IN", "category": "Comedy",        "icon": "https://www.sunnxt.com/images/channels/gemini-comedy.png"},
-    "sunnxt-gemini-life":      {"name": "Gemini Life",             "lang": "te", "country": "IN", "category": "Lifestyle",     "icon": "https://www.sunnxt.com/images/channels/gemini-life.png"},
-    "sunnxt-kushi-tv":         {"name": "Kushi TV",               "lang": "te", "country": "IN", "category": "Kids",          "icon": "https://www.sunnxt.com/images/channels/kushi-tv.png"},
-    "sunnxt-tv9-telugu":       {"name": "TV9 Telugu",             "lang": "te", "country": "IN", "category": "News",          "icon": "https://www.sunnxt.com/images/channels/tv9-telugu.png"},
-    "sunnxt-gemini-tv-sd":     {"name": "Gemini TV SD",           "lang": "te", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/gemini-tv.png"},
-    "sunnxt-gemini-movies-sd": {"name": "Gemini Movies SD",       "lang": "te", "country": "IN", "category": "Movies",        "icon": "https://www.sunnxt.com/images/channels/gemini-movies.png"},
-    "sunnxt-gemini-music-sd":  {"name": "Gemini Music SD",        "lang": "te", "country": "IN", "category": "Music",         "icon": "https://www.sunnxt.com/images/channels/gemini-music.png"},
+    # Telugu ─────────────────────────────────────────────────
+    "sun195490": {"name": "Gemini TV HD (Dolby Vision)", "lang": "te", "group": "Telugu",   "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/14019/300x300_72a28627-db58-4739-b61c-4e4208897aed.jpg"},
+    "sun194392": {"name": "Gemini TV HD",             "lang": "te", "group": "Telugu",   "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/14019/300x300_72a28627-db58-4739-b61c-4e4208897aed.jpg"},
+    "sun194396": {"name": "Gemini TV",                "lang": "te", "group": "Telugu",   "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/9017/300x300_66d46fd1-643f-429f-9e19-db603fa0e5e4.jpg"},
+    "sun192537": {"name": "Gemini Movies HD",         "lang": "te", "group": "Telugu",   "category": "Movies",
+                  "icon": "https://sund-images.sunnxt.com/26570/300x300_285efca5-02f3-40a1-8f8c-d913e8f6b989.jpg"},
+    "sun194384": {"name": "Gemini Movies",            "lang": "te", "group": "Telugu",   "category": "Movies",
+                  "icon": "https://sund-images.sunnxt.com/9015/300x300_a4023b29-e49b-4c98-9621-95b7e5c39a19.jpg"},
+    "sun194393": {"name": "Gemini Music HD",          "lang": "te", "group": "Telugu",   "category": "Music",
+                  "icon": "https://sund-images.sunnxt.com/26568/300x300_eaa4e437-cce0-4411-8e46-13640be94c55.jpg"},
+    "sun194395": {"name": "Gemini Music",             "lang": "te", "group": "Telugu",   "category": "Music",
+                  "icon": "https://sund-images.sunnxt.com/9026/300x300_4cca05ef-46eb-4076-af6b-a8fdc1b88a27.jpg"},
+    "sun194394": {"name": "Gemini Comedy",            "lang": "te", "group": "Telugu",   "category": "Comedy",
+                  "icon": "https://sund-images.sunnxt.com/9027/300x300_5cb5b903-f1a0-4590-bb90-8cfa529322e2.jpg"},
+    "sun194337": {"name": "Gemini Life",              "lang": "te", "group": "Telugu",   "category": "Lifestyle",
+                  "icon": "https://sund-images.sunnxt.com/26572/300x300_da07159f-fa9c-45d0-beb2-685bedc12e33.jpg"},
+    "sun194346": {"name": "Kushi TV",                 "lang": "te", "group": "Telugu",   "category": "Kids",
+                  "icon": "https://sund-images.sunnxt.com/26571/300x300_d0545f75-f99b-4375-8f42-6120c95fc55c.jpg"},
+    "sun200729": {"name": "TV9 Telugu",               "lang": "te", "group": "Telugu",   "category": "News",
+                  "icon": "https://sund-images.sunnxt.com/tv9-telugu.jpg"},
 
-    # ── Malayalam ────────────────────────────
-    "sunnxt-surya-tv-hd":      {"name": "Surya TV HD",            "lang": "ml", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/surya-tv.png"},
-    "sunnxt-surya-movies":     {"name": "Surya Movies",           "lang": "ml", "country": "IN", "category": "Movies",        "icon": "https://www.sunnxt.com/images/channels/surya-movies.png"},
-    "sunnxt-surya-music":      {"name": "Surya Music",            "lang": "ml", "country": "IN", "category": "Music",         "icon": "https://www.sunnxt.com/images/channels/surya-music.png"},
-    "sunnxt-surya-comedy":     {"name": "Surya Comedy",           "lang": "ml", "country": "IN", "category": "Comedy",        "icon": "https://www.sunnxt.com/images/channels/surya-comedy.png"},
-    "sunnxt-kochu-tv":         {"name": "Kochu TV",               "lang": "ml", "country": "IN", "category": "Kids",          "icon": "https://www.sunnxt.com/images/channels/kochu-tv.png"},
-    "sunnxt-surya-tv-sd":      {"name": "Surya TV SD",            "lang": "ml", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/surya-tv.png"},
+    # Malayalam ──────────────────────────────────────────────
+    "sun195489": {"name": "Surya TV HD (Dolby Vision)","lang": "ml", "group": "Malayalam","category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/26574/300x300_6ed3be47-b8bf-45ee-adf1-fb5ae9621e08.jpg"},
+    "sun194397": {"name": "Surya TV HD",              "lang": "ml", "group": "Malayalam","category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/26574/300x300_6ed3be47-b8bf-45ee-adf1-fb5ae9621e08.jpg"},
+    "sun194398": {"name": "Surya TV",                 "lang": "ml", "group": "Malayalam","category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/9018/300x300_c10cc678-9321-43f8-b717-16fa7913a6ba.jpg"},
+    "sun194385": {"name": "Surya Movies",             "lang": "ml", "group": "Malayalam","category": "Movies",
+                  "icon": "https://sund-images.sunnxt.com/9019/300x300_71ddcc0b-16e7-48e9-9998-aa023200f4bc.jpg"},
+    "sun194338": {"name": "Surya Music",              "lang": "ml", "group": "Malayalam","category": "Music",
+                  "icon": "https://sund-images.sunnxt.com/26575/300x300_a73efcfb-e350-491c-94e0-bd75f0d9d5f2.jpg"},
+    "sun193251": {"name": "Surya Comedy",             "lang": "ml", "group": "Malayalam","category": "Comedy",
+                  "icon": "https://sund-images.sunnxt.com/30835/300x300_143a4af4-2f02-4c9c-814b-af149e6a5a95.jpg"},
+    "sun194348": {"name": "Kochu TV",                 "lang": "ml", "group": "Malayalam","category": "Kids",
+                  "icon": "https://sund-images.sunnxt.com/26573/300x300_5787336f-08b9-480f-9c97-3db09999b558.jpg"},
+    "sun202222": {"name": "24 News",                  "lang": "ml", "group": "Malayalam","category": "News",
+                  "icon": "https://sund-images.sunnxt.com/24news.jpg"},
 
-    # ── Kannada ──────────────────────────────
-    "sunnxt-udaya-tv-dv":      {"name": "Udaya TV (Dolby Vision)", "lang": "kn", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/udaya-tv.png"},
-    "sunnxt-udaya-tv-hd":      {"name": "Udaya TV HD",            "lang": "kn", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/udaya-tv.png"},
-    "sunnxt-udaya-movies":     {"name": "Udaya Movies",           "lang": "kn", "country": "IN", "category": "Movies",        "icon": "https://www.sunnxt.com/images/channels/udaya-movies.png"},
-    "sunnxt-udaya-music":      {"name": "Udaya Music",            "lang": "kn", "country": "IN", "category": "Music",         "icon": "https://www.sunnxt.com/images/channels/udaya-music.png"},
-    "sunnxt-udaya-comedy":     {"name": "Udaya Comedy",           "lang": "kn", "country": "IN", "category": "Comedy",        "icon": "https://www.sunnxt.com/images/channels/udaya-comedy.png"},
-    "sunnxt-chintu-tv":        {"name": "Chintu TV",              "lang": "kn", "country": "IN", "category": "Kids",          "icon": "https://www.sunnxt.com/images/channels/chintu-tv.png"},
-    "sunnxt-tv9-kannada":      {"name": "TV9 Kannada",            "lang": "kn", "country": "IN", "category": "News",          "icon": "https://www.sunnxt.com/images/channels/tv9-kannada.png"},
-    "sunnxt-udaya-tv-sd":      {"name": "Udaya TV SD",            "lang": "kn", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/udaya-tv.png"},
+    # Kannada ────────────────────────────────────────────────
+    "sun194411": {"name": "Udaya TV HD (Dolby Vision)","lang": "kn", "group": "Kannada",  "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/30846/300x300_efb20223-e677-49fd-985e-806e7b162c6b.jpg"},
+    "sun194399": {"name": "Udaya TV HD",              "lang": "kn", "group": "Kannada",  "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/30846/300x300_efb20223-e677-49fd-985e-806e7b162c6b.jpg"},
+    "sun193239": {"name": "Udaya TV",                 "lang": "kn", "group": "Kannada",  "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/9029/300x300_9f0bcf68-5025-43af-8e60-b83fea67215c.jpg"},
+    "sun194386": {"name": "Udaya Movies",             "lang": "kn", "group": "Kannada",  "category": "Movies",
+                  "icon": "https://sund-images.sunnxt.com/26576/300x300_4ad767d2-e5d7-45f2-a95a-ab99f56cc2bf.jpg"},
+    "sun194401": {"name": "Udaya Music",              "lang": "kn", "group": "Kannada",  "category": "Music",
+                  "icon": "https://sund-images.sunnxt.com/9022/300x300_d85b4dcc-ad0c-4a5b-84fd-6dd91dc585e2.jpg"},
+    "sun194400": {"name": "Udaya Comedy",             "lang": "kn", "group": "Kannada",  "category": "Comedy",
+                  "icon": "https://sund-images.sunnxt.com/9014/300x300_8a47fe5c-81a8-42a4-8a05-f168e6a3c868.jpg"},
+    "sun194347": {"name": "Chintu TV",                "lang": "kn", "group": "Kannada",  "category": "Kids",
+                  "icon": "https://sund-images.sunnxt.com/26577/300x300_4a0f4f2f-e317-4230-9fb6-6169ef66991d.jpg"},
+    "sun200730": {"name": "TV9 Kannada",              "lang": "kn", "group": "Kannada",  "category": "News",
+                  "icon": "https://sund-images.sunnxt.com/tv9-kannada.jpg"},
+    "sun202221": {"name": "Public TV",                "lang": "kn", "group": "Kannada",  "category": "News",
+                  "icon": "https://sund-images.sunnxt.com/public-tv.jpg"},
 
-    # ── Hindi ────────────────────────────────
-    "sunnxt-sun-neo":          {"name": "Sun Neo",                "lang": "hi", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/sun-neo.png"},
-    "sunnxt-tv9-bharatvarsh":  {"name": "TV9 Bharatvarsh",        "lang": "hi", "country": "IN", "category": "News",          "icon": "https://www.sunnxt.com/images/channels/tv9-bharatvarsh.png"},
+    # Hindi ──────────────────────────────────────────────────
+    "sun194389": {"name": "Sun Neo HD",               "lang": "hi", "group": "Hindi",    "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/75116/300x300_sun-neo.jpg"},
+    "sun200731": {"name": "TV9 Bharatvarsh",          "lang": "hi", "group": "Hindi",    "category": "News",
+                  "icon": "https://sund-images.sunnxt.com/tv9-bharatvarsh.jpg"},
+    "sun207724": {"name": "News9",                    "lang": "kn", "group": "Kannada",  "category": "News",
+                  "icon": "https://sund-images.sunnxt.com/news9.jpg"},
 
-    # ── Bengali ──────────────────────────────
-    "sunnxt-sun-bangla":       {"name": "Sun Bangla",             "lang": "bn", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/sun-bangla.png"},
+    # Bengali ────────────────────────────────────────────────
+    "sun194388": {"name": "Sun Bangla",               "lang": "bn", "group": "Bengali",  "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/75117/300x300_4b19b530-f0bb-4b26-a9de-f3cdd5f8be20.jpg"},
 
-    # ── Marathi ──────────────────────────────
-    "sunnxt-sun-marathi":      {"name": "Sun Marathi",            "lang": "mr", "country": "IN", "category": "Entertainment", "icon": "https://www.sunnxt.com/images/channels/sun-marathi.png"},
+    # Marathi ────────────────────────────────────────────────
+    "sun194387": {"name": "Sun Marathi",              "lang": "mr", "group": "Marathi",  "category": "Entertainment",
+                  "icon": "https://sund-images.sunnxt.com/75118/300x300_sun-marathi.jpg"},
 }
 
-# ─────────────────────────────────────────────
-# Generic programme schedule per category
-# (Replace with real API data if available)
-# ─────────────────────────────────────────────
-
-SCHEDULE_TEMPLATES = {
-    "Entertainment": [
-        ("00:00", "06:00", "Night Repeat"),
-        ("06:00", "09:00", "Morning Shows"),
-        ("09:00", "12:00", "Morning Serials"),
-        ("12:00", "14:00", "Afternoon Movies"),
-        ("14:00", "17:00", "Afternoon Serials"),
-        ("17:00", "20:00", "Prime Time Serials"),
-        ("20:00", "22:00", "Prime Time Specials"),
-        ("22:00", "24:00", "Night Shows"),
-    ],
-    "Movies": [
-        ("00:00", "03:00", "Late Night Movie"),
-        ("03:00", "06:00", "Early Morning Movie"),
-        ("06:00", "09:00", "Morning Movie"),
-        ("09:00", "12:00", "Forenoon Movie"),
-        ("12:00", "15:00", "Afternoon Movie"),
-        ("15:00", "18:00", "Evening Movie"),
-        ("18:00", "21:00", "Prime Time Movie"),
-        ("21:00", "24:00", "Night Movie"),
-    ],
-    "Music": [
-        ("00:00", "06:00", "Night Beats"),
-        ("06:00", "10:00", "Morning Melodies"),
-        ("10:00", "14:00", "Hit Parade"),
-        ("14:00", "18:00", "Afternoon Hits"),
-        ("18:00", "22:00", "Evening Chartbusters"),
-        ("22:00", "24:00", "Night Grooves"),
-    ],
-    "News": [
-        ("00:00", "06:00", "Night Bulletin"),
-        ("06:00", "09:00", "Morning Headlines"),
-        ("09:00", "12:00", "News at Nine"),
-        ("12:00", "15:00", "Midday Report"),
-        ("15:00", "18:00", "Afternoon News"),
-        ("18:00", "21:00", "Evening News"),
-        ("21:00", "23:00", "Prime Time News"),
-        ("23:00", "24:00", "Late Night Bulletin"),
-    ],
-    "Kids": [
-        ("00:00", "06:00", "Sleep Time"),
-        ("06:00", "09:00", "Morning Cartoons"),
-        ("09:00", "12:00", "Toons Hour"),
-        ("12:00", "15:00", "Afternoon Adventures"),
-        ("15:00", "18:00", "School Hour"),
-        ("18:00", "21:00", "Family Time"),
-        ("21:00", "24:00", "Good Night Stories"),
-    ],
-    "Comedy": [
-        ("00:00", "06:00", "Repeat Comedy"),
-        ("06:00", "10:00", "Morning Laughs"),
-        ("10:00", "14:00", "Comedy Carnival"),
-        ("14:00", "18:00", "Afternoon Giggles"),
-        ("18:00", "22:00", "Prime Comedy"),
-        ("22:00", "24:00", "Late Night Comedy"),
-    ],
-    "Lifestyle": [
-        ("00:00", "06:00", "Repeat Shows"),
-        ("06:00", "10:00", "Morning Lifestyle"),
-        ("10:00", "14:00", "Health & Home"),
-        ("14:00", "18:00", "Afternoon Features"),
-        ("18:00", "22:00", "Prime Lifestyle"),
-        ("22:00", "24:00", "Night Features"),
-    ],
-}
+SUNNXT_IDS = set(CHANNELS.keys())
 
 
-def fmt_time(dt: datetime) -> str:
-    """Format datetime to XMLTV timestamp: YYYYMMDDHHMMSS +0530"""
-    return dt.strftime("%Y%m%d%H%M%S") + " +0530"
+def fetch_epg(url: str) -> bytes:
+    print(f"[↓] Fetching {url} ...")
+    headers = {"User-Agent": "Mozilla/5.0 (sunnxt-epg/2.0)"}
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=90) as resp:
+        gz = resp.read()
+    xml_bytes = gzip.decompress(gz)
+    print(f"[✓] {len(gz)//1024} KB → {len(xml_bytes)//1024} KB uncompressed")
+    return xml_bytes
 
 
-def parse_time(base_date: datetime, time_str: str) -> datetime:
-    """Parse HH:MM string relative to base_date. Handles '24:00' as next day 00:00."""
-    h, m = map(int, time_str.split(":"))
-    if h == 24:
-        return (base_date + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    return base_date.replace(hour=h, minute=m, second=0, microsecond=0)
+def build_filtered_epg(xml_bytes: bytes) -> ET.Element:
+    print("[*] Parsing XML ...")
+    src = ET.fromstring(xml_bytes)
 
+    out = ET.Element("tv")
+    out.set("generator-info-name", "sunnxt-epg")
+    out.set("generator-info-url", "https://github.com/yourusername/sunnxt-epg")
+    out.set("source-info-name", "Sun NXT Live (via tvepg)")
+    out.set("source-info-url", "https://www.sunnxt.com/live")
 
-def build_epg(days: int = 1) -> ET.Element:
-    root = ET.Element("tv")
-    root.set("generator-info-name", "sunnxt-epg")
-    root.set("generator-info-url", "https://github.com/yourusername/sunnxt-epg")
-    root.set("source-info-name", "Sun NXT")
-    root.set("source-info-url", "https://www.sunnxt.com/live")
+    # Channels
+    found = set()
+    for ch in src.findall("channel"):
+        cid = ch.get("id", "")
+        if cid in SUNNXT_IDS:
+            found.add(cid)
+            meta = CHANNELS[cid]
+            new_ch = ET.SubElement(out, "channel")
+            new_ch.set("id", cid)
+            dn = ET.SubElement(new_ch, "display-name")
+            dn.set("lang", meta["lang"])
+            dn.text = meta["name"]
+            icon = ET.SubElement(new_ch, "icon")
+            icon.set("src", meta["icon"])
+            url_el = ET.SubElement(new_ch, "url")
+            url_el.text = "https://www.sunnxt.com/live"
 
-    # ── Channel entries ───────────────────────
-    for ch_id, ch in CHANNELS.items():
-        channel = ET.SubElement(root, "channel")
-        channel.set("id", ch_id)
+    # Channels not in upstream — add metadata-only entry
+    for cid in SUNNXT_IDS - found:
+        meta = CHANNELS[cid]
+        new_ch = ET.SubElement(out, "channel")
+        new_ch.set("id", cid)
+        dn = ET.SubElement(new_ch, "display-name")
+        dn.set("lang", meta["lang"])
+        dn.text = meta["name"]
+        ET.SubElement(new_ch, "icon").set("src", meta["icon"])
+        ET.SubElement(new_ch, "url").text = "https://www.sunnxt.com/live"
 
-        display = ET.SubElement(channel, "display-name")
-        display.set("lang", ch["lang"])
-        display.text = ch["name"]
+    # Programmes
+    prog_count = 0
+    for prog in src.findall("programme"):
+        if prog.get("channel", "") in SUNNXT_IDS:
+            out.append(prog)
+            prog_count += 1
 
-        if ch.get("icon"):
-            icon = ET.SubElement(channel, "icon")
-            icon.set("src", ch["icon"])
-
-        url = ET.SubElement(channel, "url")
-        url.text = "https://www.sunnxt.com/live"
-
-    # ── Programme entries ─────────────────────
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-    for day_offset in range(days):
-        base_date = today + timedelta(days=day_offset)
-        date_label = base_date.strftime("%d %b %Y")
-
-        for ch_id, ch in CHANNELS.items():
-            category = ch.get("category", "Entertainment")
-            template = SCHEDULE_TEMPLATES.get(category, SCHEDULE_TEMPLATES["Entertainment"])
-
-            for start_str, stop_str, title in template:
-                start_dt = parse_time(base_date, start_str)
-                stop_dt  = parse_time(base_date, stop_str)
-
-                prog = ET.SubElement(root, "programme")
-                prog.set("start",   fmt_time(start_dt))
-                prog.set("stop",    fmt_time(stop_dt))
-                prog.set("channel", ch_id)
-
-                t = ET.SubElement(prog, "title")
-                t.set("lang", ch["lang"])
-                t.text = title
-
-                desc = ET.SubElement(prog, "desc")
-                desc.set("lang", ch["lang"])
-                desc.text = f"{title} on {ch['name']} — {date_label}"
-
-                cat = ET.SubElement(prog, "category")
-                cat.set("lang", "en")
-                cat.text = category
-
-                country = ET.SubElement(prog, "country")
-                country.text = ch["country"]
-
-    return root
+    print(f"[✓] Channels from upstream: {len(found)}/{len(SUNNXT_IDS)} | Programmes: {prog_count}")
+    return out
 
 
 def prettify(element: ET.Element) -> str:
     raw = ET.tostring(element, encoding="unicode")
     dom = minidom.parseString(raw)
-    return dom.toprettyxml(indent="  ", encoding=None)
+    lines = dom.toprettyxml(indent="  ").split("\n")
+    lines[0] = '<?xml version="1.0" encoding="UTF-8"?>'
+    return "\n".join(lines)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate XMLTV EPG for Sun NXT live channels"
-    )
-    parser.add_argument(
-        "--days", type=int, default=1,
-        help="Number of days to generate EPG for (default: 1)"
-    )
-    parser.add_argument(
-        "--output", type=str, default="sunnxt_epg.xml",
-        help="Output XML file path (default: sunnxt_epg.xml)"
-    )
-    parser.add_argument(
-        "--list-channels", action="store_true",
-        help="List all channels and exit"
-    )
+    parser = argparse.ArgumentParser(description="Sun NXT EPG — real schedule data")
+    parser.add_argument("--output", default="sunnxt_epg.xml", help="Output file")
+    parser.add_argument("--gz", action="store_true", help="Also write .gz")
+    parser.add_argument("--list-channels", action="store_true")
     args = parser.parse_args()
 
     if args.list_channels:
-        print(f"\n{'ID':<35} {'Name':<35} {'Lang':<6} {'Category'}")
-        print("-" * 90)
-        for ch_id, ch in CHANNELS.items():
-            print(f"{ch_id:<35} {ch['name']:<35} {ch['lang']:<6} {ch['category']}")
-        print(f"\nTotal: {len(CHANNELS)} channels")
+        print(f"\n{'ID':<15} {'Name':<30} {'Group':<12} {'Category'}")
+        print("─" * 75)
+        for grp in ["Tamil","Telugu","Malayalam","Kannada","Hindi","Bengali","Marathi"]:
+            first = True
+            for cid, meta in CHANNELS.items():
+                if meta["group"] == grp:
+                    if first:
+                        print(f"\n  ── {grp} ──")
+                        first = False
+                    print(f"  {cid:<15} {meta['name']:<30} {meta['category']}")
+        print(f"\nTotal: {len(CHANNELS)} channels\n")
         return
 
-    print(f"[*] Generating EPG for {len(CHANNELS)} channels over {args.days} day(s)...")
-    root = build_epg(days=args.days)
-
+    xml_bytes = fetch_epg(EPG_URL)
+    root = build_filtered_epg(xml_bytes)
     xml_str = prettify(root)
-    # Remove the extra XML declaration minidom adds when encoding=None
-    lines = xml_str.split("\n")
-    if lines[0].startswith("<?xml"):
-        lines[0] = '<?xml version="1.0" encoding="UTF-8"?>'
-    output = "\n".join(lines)
 
-    out_path = args.output
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write(output)
+    with open(args.output, "w", encoding="utf-8") as f:
+        f.write(xml_str)
+    print(f"[✓] Saved: {args.output}  ({os.path.getsize(args.output)//1024} KB)")
 
-    size_kb = os.path.getsize(out_path) / 1024
-    print(f"[✓] EPG saved to: {out_path}  ({size_kb:.1f} KB)")
-    print(f"[✓] Channels: {len(CHANNELS)}  |  Days: {args.days}")
+    if args.gz:
+        gz_path = args.output + ".gz"
+        with gzip.open(gz_path, "wb") as f:
+            f.write(xml_str.encode("utf-8"))
+        print(f"[✓] Saved (gz): {gz_path}  ({os.path.getsize(gz_path)//1024} KB)")
 
 
 if __name__ == "__main__":
